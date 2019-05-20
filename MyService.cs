@@ -1,5 +1,5 @@
 ﻿// https://docs.microsoft.com/en-us/dotnet/framework/windows-services/walkthrough-creating-a-windows-service-application-in-the-component-designer
-
+//using Microsoft.Azure.Devices.Client;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -31,6 +31,13 @@ public partial class MyService : ServiceBase
             SERVICE_PAUSE_PENDING = 0x00000006,
             SERVICE_PAUSED = 0x00000007,
         }
+
+        static string iotHubUri = "TelemetryManagementIOTHub.azure-devices.net";
+        static DeviceClient iotHubDeviceClient;
+        static string iotHubDeviceName = "SimulatedDevice_1";
+        static string iotHubDeviceKey = "EWGizAIIh6E3wybumuWhPFpbXmDNNw5Mq0ySNWS24vQ=";
+        static double baseValue = 20;
+
 
         [StructLayout(LayoutKind.Sequential)]
         public struct ServiceStatus
@@ -82,7 +89,7 @@ public partial class MyService : ServiceBase
             ServiceStatus serviceStatus = new ServiceStatus();
             eventLog1.WriteEntry("In OnStart.", EventLogEntryType.Information, eventId++);
             timer = new Timer();
-            timer.Interval = 30000; // 30 seconds
+            timer.Interval = 150000; // 30 seconds
             timer.Elapsed += new ElapsedEventHandler(this.OnTimer);
             timer.Start();
             serviceStatus.dwCurrentState = ServiceState.SERVICE_RUNNING;
@@ -101,7 +108,32 @@ public partial class MyService : ServiceBase
         public void OnTimer(object sender, ElapsedEventArgs args)
         {
             // TODO: Insert monitoring activities here.
-            eventLog1.WriteEntry("Monitoring the System", EventLogEntryType.Information, eventId++);
+            eventLog1.WriteEntry("Sending Telemetry", EventLogEntryType.Information, eventId++);
         }
+
+        static async Task SendTelemetry()
+        {
+            var random = new Random();
+            var history = new List<string>();
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                var message = JsonConvert.SerializeObject(new {
+                    time = DateTime.UtcNow,
+                    id = "beb02410-78ba-496e-a26a-59cef9b4d609",
+                    readings = new[] {
+                        new { value = Math.Round(baseValue + random.NextDouble() * 10, 3) }
+                    }
+                });
+
+             //   history.Add(message);
+             //   PrintHistory(history);
+
+                await iotHubDeviceClient.SendEventAsync(new Message(Encoding.ASCII.GetBytes(message)));
+
+             //   await Task.Delay(5000);
+            }
+            Console.Clear();
+        }
+
     }
 }
