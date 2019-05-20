@@ -10,6 +10,8 @@ using System.ServiceProcess;
 using System.Text;
 using System.Timers;
 using System.Runtime.InteropServices;
+using Newtonsoft.Json;
+
 
 
 
@@ -37,7 +39,6 @@ public partial class MyService : ServiceBase
         static string iotHubDeviceName = "SimulatedDevice_1";
         static string iotHubDeviceKey = "EWGizAIIh6E3wybumuWhPFpbXmDNNw5Mq0ySNWS24vQ=";
         static double baseValue = 20;
-
 
         [StructLayout(LayoutKind.Sequential)]
         public struct ServiceStatus
@@ -111,28 +112,24 @@ public partial class MyService : ServiceBase
             eventLog1.WriteEntry("Sending Telemetry", EventLogEntryType.Information, eventId++);
         }
 
-        static async Task SendTelemetry()
+        static void SendTelemetry()
         {
             var random = new Random();
             var history = new List<string>();
-            while (!cancellationToken.IsCancellationRequested)
-            {
-                var message = JsonConvert.SerializeObject(new {
-                    time = DateTime.UtcNow,
-                    id = "beb02410-78ba-496e-a26a-59cef9b4d609",
-                    readings = new[] {
-                        new { value = Math.Round(baseValue + random.NextDouble() * 10, 3) }
-                    }
-                });
-
+            var message = JsonConvert.SerializeObject(new {
+                time = DateTime.UtcNow,
+                id = "beb02410-78ba-496e-a26a-59cef9b4d609",
+                readings = new[] {
+                    new { value = Math.Round(baseValue + random.NextDouble() * 10, 3) }
+                }
+        });         
              //   history.Add(message);
              //   PrintHistory(history);
 
-                await iotHubDeviceClient.SendEventAsync(new Message(Encoding.ASCII.GetBytes(message)));
+                iotHubDeviceClient.SendEventAsync(new Message(Encoding.ASCII.GetBytes(message)));
 
              //   await Task.Delay(5000);
             }
-            Console.Clear();
         }
 
     }
